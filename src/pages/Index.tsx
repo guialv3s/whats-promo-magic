@@ -3,18 +3,21 @@ import { Header } from "@/components/Header";
 import { ProductForm } from "@/components/ProductForm";
 import { MessagePreview } from "@/components/MessagePreview";
 import { MessageHistory } from "@/components/MessageHistory";
+import { WhatsAppConnection } from "@/components/WhatsAppConnection";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductData, MessageHistoryItem } from "@/types/product";
 import { useMessageHistory } from "@/hooks/useMessageHistory";
+import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
 import { generateWhatsAppMessage } from "@/utils/messageGenerator";
-import { FileText, History, PlusCircle } from "lucide-react";
+import { FileText, History, PlusCircle, Smartphone } from "lucide-react";
 
 const Index = () => {
   const [currentProduct, setCurrentProduct] = useState<ProductData | null>(null);
   const [editingItem, setEditingItem] = useState<MessageHistoryItem | null>(null);
   const [activeTab, setActiveTab] = useState("create");
   const { history, saveToHistory, removeFromHistory } = useMessageHistory();
+  const whatsApp = useWhatsAppConnection();
 
   const handleFormSubmit = (data: ProductData) => {
     setCurrentProduct(data);
@@ -58,7 +61,7 @@ const Index = () => {
 
       <main className="container mx-auto px-4 pb-12">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8 bg-secondary/50">
+          <TabsList className="grid w-full max-w-lg mx-auto grid-cols-3 mb-8 bg-secondary/50">
             <TabsTrigger value="create" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <PlusCircle className="h-4 w-4" />
               Criar
@@ -70,6 +73,13 @@ const Index = () => {
                 <span className="ml-1 bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full">
                   {history.length}
                 </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="whatsapp" className="flex items-center gap-2 data-[state=active]:bg-whatsapp data-[state=active]:text-white">
+              <Smartphone className="h-4 w-4" />
+              WhatsApp
+              {whatsApp.status === "connected" && (
+                <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
               )}
             </TabsTrigger>
           </TabsList>
@@ -166,6 +176,30 @@ const Index = () => {
                 onDelete={removeFromHistory}
               />
             </Card>
+          </TabsContent>
+
+          <TabsContent value="whatsapp" className="mt-0">
+            <div className="max-w-md mx-auto animate-fade-up">
+              <WhatsAppConnection
+                status={whatsApp.status}
+                qrCode={whatsApp.qrCode}
+                onConnect={whatsApp.connect}
+                onDisconnect={whatsApp.disconnect}
+                onRefreshQR={whatsApp.refreshQR}
+              />
+              
+              {/* Info Card */}
+              <Card className="mt-6 p-4 bg-secondary/30 border-border">
+                <h4 className="font-medium text-foreground mb-2">
+                  ℹ️ Sobre a conexão
+                </h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• A sessão é salva para reconexão automática</li>
+                  <li>• Envio automático disponível após conexão</li>
+                  <li>• Múltiplos dispositivos não são suportados simultaneamente</li>
+                </ul>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
