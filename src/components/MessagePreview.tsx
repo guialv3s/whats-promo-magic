@@ -38,8 +38,22 @@ export function MessagePreview({ data, onSave }: MessagePreviewProps) {
 
   const handleWhatsAppSend = () => {
     const url = createWhatsAppUrl(message);
-    window.open(url, "_blank");
+    const newWindow = window.open(url, "_blank", "noopener,noreferrer");
+    
+    // Check if popup was blocked
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
+      toast.error("Popup bloqueado! Clique em 'Copiar Mensagem' e cole manualmente no WhatsApp.", {
+        duration: 5000,
+        action: {
+          label: "Copiar",
+          onClick: () => handleCopy(),
+        },
+      });
+      return;
+    }
+    
     onSave?.();
+    toast.success("WhatsApp aberto em nova aba!");
   };
 
   const calculateDiscount = () => {

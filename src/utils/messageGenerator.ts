@@ -50,7 +50,11 @@ export function formatCurrency(value: string): string {
   return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-export function createWhatsAppUrl(message: string): string {
+export function createWhatsAppUrl(message: string, phoneNumber?: string): string {
   const encodedMessage = encodeURIComponent(message);
-  return `https://web.whatsapp.com/send?text=${encodedMessage}`;
+  const phone = phoneNumber ? phoneNumber.replace(/\D/g, "") : "";
+  // Using api.whatsapp.com which works on both mobile and desktop
+  return phone 
+    ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`
+    : `https://api.whatsapp.com/send?text=${encodedMessage}`;
 }
