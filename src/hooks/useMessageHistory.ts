@@ -23,15 +23,19 @@ export function useMessageHistory() {
   }, []);
 
   const saveToHistory = (item: MessageHistoryItem) => {
-    const newHistory = [item, ...history].slice(0, 50); // Keep last 50 items
-    setHistory(newHistory);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+    setHistory((prevHistory) => {
+      const newHistory = [item, ...prevHistory].slice(0, 50); // Keep last 50 items
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+      return newHistory;
+    });
   };
 
   const removeFromHistory = (id: string) => {
-    const newHistory = history.filter((item) => item.id !== id);
-    setHistory(newHistory);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+    setHistory((prevHistory) => {
+      const newHistory = prevHistory.filter((item) => item.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+      return newHistory;
+    });
   };
 
   const clearHistory = () => {
