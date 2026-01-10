@@ -1,73 +1,113 @@
-# Welcome to your Lovable project
+# WhatsApp Promo Magic 📱💰
 
-## Project info
+Aplicação para criar e agendar mensagens promocionais no WhatsApp automaticamente.
 
-**URL**: https://lovable.dev/projects/e8f9e788-22fd-4111-9cca-a1040d28b1ca
+## ✨ Funcionalidades
 
-## How can I edit this code?
+- **Criar mensagens promocionais** formatadas para WhatsApp
+- **Agendar envio automático** para horários específicos
+- **Conectar ao WhatsApp** via QR Code (como WhatsApp Web)
+- **Selecionar grupos** de destino para as mensagens
+- **Histórico** de mensagens criadas
+- **Preview em tempo real** das mensagens
 
-There are several ways of editing your application.
+## 🚀 Como Usar
 
-**Use Lovable**
+### 1. Instalar dependências
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e8f9e788-22fd-4111-9cca-a1040d28b1ca) and start prompting.
+```bash
+# Instalar dependências do frontend
+npm install
 
-Changes made via Lovable will be committed automatically to this repo.
+# Instalar dependências do servidor
+cd server && npm install
+```
 
-**Use your preferred IDE**
+### 2. Iniciar o servidor backend
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+O servidor é responsável por conectar ao WhatsApp e enviar as mensagens:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+# Na pasta do projeto
+npm run server
 
-Follow these steps:
+# Ou diretamente
+cd server && npm start
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+O servidor rodará na porta 3001.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 3. Iniciar o frontend
 
-# Step 3: Install the necessary dependencies.
-npm i
+Em outro terminal:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+O frontend estará disponível em http://localhost:5173
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 4. Conectar ao WhatsApp
 
-**Use GitHub Codespaces**
+1. Acesse a aba **WhatsApp** no app
+2. Clique em **Conectar meu WhatsApp**
+3. Escaneie o QR Code com seu celular
+4. Selecione o grupo de destino
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 5. Criar e agendar mensagens
 
-## What technologies are used for this project?
+1. Na aba **Criar**, preencha os dados do produto
+2. Defina a data e horário para envio
+3. Clique em **Agendar** ou **Enviar Agora**
 
-This project is built with:
+## 📁 Estrutura do Projeto
 
+```
+whats-promo-magic/
+├── src/                    # Frontend React
+│   ├── components/         # Componentes da UI
+│   ├── hooks/              # Hooks customizados
+│   ├── services/           # API e WebSocket
+│   ├── pages/              # Páginas
+│   └── types/              # Tipos TypeScript
+│
+├── server/                 # Backend Node.js
+│   ├── index.js            # Servidor Express
+│   ├── services/
+│   │   ├── whatsapp.js     # Conexão WhatsApp
+│   │   ├── scheduler.js    # Agendador
+│   │   └── messagesStore.js # Armazenamento
+│   └── data/               # Dados persistidos
+│
+└── package.json
+```
+
+## 🛠️ Tecnologias
+
+### Frontend
+- React + TypeScript
 - Vite
-- TypeScript
-- React
-- shadcn-ui
 - Tailwind CSS
+- shadcn/ui
+- Socket.IO Client
 
-## How can I deploy this project?
+### Backend
+- Node.js + Express
+- whatsapp-web.js (automação WhatsApp)
+- Socket.IO (tempo real)
+- node-cron (agendamento)
 
-Simply open [Lovable](https://lovable.dev/projects/e8f9e788-22fd-4111-9cca-a1040d28b1ca) and click on Share -> Publish.
+## ⚠️ Notas Importantes
 
-## Can I connect a custom domain to my Lovable project?
+1. **Mantenha o servidor rodando** para que as mensagens agendadas sejam enviadas
+2. A sessão do WhatsApp é salva localmente - você não precisa escanear o QR toda vez
+3. Se desconectar o WhatsApp do celular, será necessário escanear novamente
+4. O servidor usa Chrome/Chromium em modo headless
 
-Yes, you can!
+## 📝 Licença
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Este projeto é para uso pessoal/educacional.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+
+Feito com ❤️ para facilitar o envio de promoções no WhatsApp!
