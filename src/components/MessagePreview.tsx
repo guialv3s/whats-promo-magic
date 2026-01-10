@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProductData } from "@/types/product";
 import { generateWhatsAppMessage, createWhatsAppUrl } from "@/utils/messageGenerator";
-import { 
-  Copy, 
-  Send, 
-  Check, 
+import {
+  Copy,
+  Send,
+  Check,
   ExternalLink,
   Image as ImageIcon,
   Clock
@@ -39,7 +39,7 @@ export function MessagePreview({ data, onSave }: MessagePreviewProps) {
   const handleWhatsAppSend = () => {
     const url = createWhatsAppUrl(message);
     const newWindow = window.open(url, "_blank", "noopener,noreferrer");
-    
+
     // Check if popup was blocked
     if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
       toast.error("Popup bloqueado! Clique em 'Copiar Mensagem' e cole manualmente no WhatsApp.", {
@@ -51,7 +51,7 @@ export function MessagePreview({ data, onSave }: MessagePreviewProps) {
       });
       return;
     }
-    
+
     onSave?.();
     toast.success("WhatsApp aberto em nova aba!");
   };
@@ -75,10 +75,10 @@ export function MessagePreview({ data, onSave }: MessagePreviewProps) {
         {/* Image Preview */}
         {data.productImage && (
           <div className="relative aspect-video bg-secondary/50 flex items-center justify-center">
-            <img 
-              src={data.productImage} 
+            <img
+              src={data.productImage}
               alt={data.name}
-              className="w-24 h-24 object-contain"
+              className="w-full h-full object-contain bg-black/40"
             />
             <div className="absolute top-2 right-2 bg-destructive text-foreground text-xs font-bold px-2 py-1 rounded-full">
               -{discountPercentage}%
@@ -130,9 +130,9 @@ export function MessagePreview({ data, onSave }: MessagePreviewProps) {
           {/* Link */}
           <div className="pt-2 border-t border-border">
             <p className="text-sm text-muted-foreground mb-1">Link do produto ⬇️</p>
-            <a 
-              href={data.productLink} 
-              target="_blank" 
+            <a
+              href={data.productLink}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-primary text-sm hover:underline flex items-center gap-1 break-all"
             >

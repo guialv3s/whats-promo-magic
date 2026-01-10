@@ -1,119 +1,162 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ConnectionStatus } from "@/components/WhatsAppConnection";
+import { apiService, WhatsAppGroup } from "@/services/api";
 import { toast } from "sonner";
-
-const STORAGE_KEY = "whatsapp-connection-status";
 
 interface UseWhatsAppConnectionReturn {
   status: ConnectionStatus;
   qrCode: string | null;
+  groups: WhatsAppGroup[];
+  selectedGroup: WhatsAppGroup | null;
+  isLoadingGroups: boolean;
+  serverConnected: boolean;
   connect: () => void;
   disconnect: () => void;
   refreshQR: () => void;
+  loadGroups: () => void;
+  selectGroup: (group: WhatsAppGroup | null) => void;
 }
 
+const SELECTED_GROUP_KEY = "whatsapp-selected-group";
+
 export function useWhatsAppConnection(): UseWhatsAppConnectionReturn {
-  const [status, setStatus] = useState<ConnectionStatus>(() => {
-    // Check if there's a saved connection status
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved === "connected" ? "connected" : "disconnected";
-  });
+  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [groups, setGroups] = useState<WhatsAppGroup[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<WhatsAppGroup | null>(() => {
+    const saved = localStorage.getItem(SELECTED_GROUP_KEY);
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [serverConnected, setServerConnected] = useState(false);
+
+  // Subscribe to WebSocket events
+  useEffect(() => {
+    const unsubscribeStatus = apiService.on('connection-status', (data) => {
+      console.log('📱 Status recebido:', data);
+      setStatus(data.status as ConnectionStatus);
+
+      if (data.qrCode) {
+        setQrCode(data.qrCode);
+      }
+
+      if (data.status === 'connected') {
+        setQrCode(null);
+        setServerConnected(true);
+      }
+    });
+
+    const unsubscribeQR = apiService.on('qr-code', (data) => {
+      console.log('📱 QR Code recebido');
+      setQrCode(data.qrCode);
+    });
+
+    // Check initial status
+    checkStatus();
+
+    return () => {
+      unsubscribeStatus();
+      unsubscribeQR();
+    };
+  }, []);
+
+  const checkStatus = async () => {
+    try {
+      const result = await apiService.getWhatsAppStatus();
+      setStatus(result.status as ConnectionStatus);
+      setServerConnected(true);
+
+      if (result.isReady) {
+        loadGroups();
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status:', error);
+      setServerConnected(false);
+    }
+  };
 
   const connect = useCallback(async () => {
-    setStatus("connecting");
-    
-    // TODO: Replace this with actual backend API call
-    // Example: const response = await fetch('/api/whatsapp/connect');
-    
-    // Simulate connection delay
-    setTimeout(() => {
-      setStatus("scanning");
-      // Generate a placeholder QR code
-      // In production, this would come from the backend (Baileys/whatsapp-web.js)
-      setQrCode(generatePlaceholderQR());
-      toast.info("Escaneie o QR Code com seu WhatsApp");
-    }, 1500);
+    try {
+      setStatus("connecting");
+      const result = await apiService.connectWhatsApp();
 
-    // Simulate successful connection after QR scan
-    // TODO: In production, this would be triggered by WebSocket event from backend
-    setTimeout(() => {
-      setStatus("connected");
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao conectar');
+      }
+
+      toast.info("Iniciando conexão com WhatsApp...");
+    } catch (error) {
+      console.error('Erro ao conectar:', error);
+      setStatus("error");
+      toast.error("Erro ao conectar. Verifique se o servidor está rodando.");
+    }
+  }, []);
+
+  const disconnect = useCallback(async () => {
+    try {
+      await apiService.disconnectWhatsApp();
+      setStatus("disconnected");
       setQrCode(null);
-      localStorage.setItem(STORAGE_KEY, "connected");
-      toast.success("WhatsApp conectado com sucesso!");
-    }, 15000); // 15 seconds to simulate user scanning
+      setGroups([]);
+      toast.info("WhatsApp desconectado");
+    } catch (error) {
+      console.error('Erro ao desconectar:', error);
+      toast.error("Erro ao desconectar");
+    }
   }, []);
 
-  const disconnect = useCallback(() => {
-    // TODO: Replace with actual backend API call
-    // Example: await fetch('/api/whatsapp/disconnect', { method: 'POST' });
-    
-    setStatus("disconnected");
-    setQrCode(null);
-    localStorage.removeItem(STORAGE_KEY);
-    toast.info("WhatsApp desconectado");
-  }, []);
-
-  const refreshQR = useCallback(() => {
+  const refreshQR = useCallback(async () => {
     if (status === "scanning") {
-      // TODO: Replace with actual backend API call to get new QR
-      // Example: const response = await fetch('/api/whatsapp/refresh-qr');
-      
-      setQrCode(generatePlaceholderQR());
-      toast.info("QR Code atualizado");
+      try {
+        await apiService.refreshQRCode();
+        toast.info("Atualizando QR Code...");
+      } catch (error) {
+        console.error('Erro ao atualizar QR:', error);
+        toast.error("Erro ao atualizar QR Code");
+      }
     }
   }, [status]);
+
+  const loadGroups = useCallback(async () => {
+    setIsLoadingGroups(true);
+    try {
+      const result = await apiService.getGroups();
+
+      if (result.success) {
+        setGroups(result.groups);
+        console.log(`📋 ${result.groups.length} grupos carregados`);
+      } else {
+        throw new Error('Erro ao carregar grupos');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar grupos:', error);
+      toast.error("Erro ao carregar grupos. Verifique a conexão.");
+    } finally {
+      setIsLoadingGroups(false);
+    }
+  }, []);
+
+  const selectGroup = useCallback((group: WhatsAppGroup | null) => {
+    setSelectedGroup(group);
+    if (group) {
+      localStorage.setItem(SELECTED_GROUP_KEY, JSON.stringify(group));
+      toast.success(`Grupo "${group.name}" selecionado`);
+    } else {
+      localStorage.removeItem(SELECTED_GROUP_KEY);
+    }
+  }, []);
 
   return {
     status,
     qrCode,
+    groups,
+    selectedGroup,
+    isLoadingGroups,
+    serverConnected,
     connect,
     disconnect,
     refreshQR,
+    loadGroups,
+    selectGroup,
   };
-}
-
-// Placeholder QR code generator - replace with actual QR from backend
-function generatePlaceholderQR(): string {
-  // This creates a simple data URL for a placeholder QR code
-  // In production, the QR code string would come from Baileys/whatsapp-web.js
-  const canvas = document.createElement("canvas");
-  canvas.width = 200;
-  canvas.height = 200;
-  const ctx = canvas.getContext("2d");
-  
-  if (ctx) {
-    // White background
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, 200, 200);
-    
-    // Draw QR-like pattern (placeholder)
-    ctx.fillStyle = "#000000";
-    const size = 8;
-    for (let y = 0; y < 25; y++) {
-      for (let x = 0; x < 25; x++) {
-        // Create finder patterns (corners)
-        const isFinderPattern = 
-          (x < 7 && y < 7) || 
-          (x >= 18 && y < 7) || 
-          (x < 7 && y >= 18);
-        
-        if (isFinderPattern) {
-          const isOuter = x === 0 || x === 6 || y === 0 || y === 6 ||
-                         x === 18 || x === 24 || y === 18 || y === 24;
-          const isInner = (x >= 2 && x <= 4 && y >= 2 && y <= 4) ||
-                         (x >= 20 && x <= 22 && y >= 2 && y <= 4) ||
-                         (x >= 2 && x <= 4 && y >= 20 && y <= 22);
-          if (isOuter || isInner) {
-            ctx.fillRect(x * size, y * size, size, size);
-          }
-        } else if (Math.random() > 0.5) {
-          ctx.fillRect(x * size, y * size, size, size);
-        }
-      }
-    }
-  }
-  
-  return canvas.toDataURL();
 }

@@ -19,7 +19,7 @@ export function Header() {
             <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 text-whatsapp" />
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
-            WhatsApp <span className="text-gradient">Promo</span>
+            SHAZAM OFERTAS
           </h1>
         </div>
         

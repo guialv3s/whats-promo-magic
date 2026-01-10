@@ -1,34 +1,58 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { 
-  Smartphone, 
-  QrCode, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Smartphone,
+  QrCode,
+  CheckCircle2,
+  XCircle,
   RefreshCw,
   Loader2,
   Wifi,
-  WifiOff
+  WifiOff,
+  Users,
+  ChevronDown,
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { WhatsAppGroup } from "@/services/api";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "scanning" | "connected" | "error";
 
 interface WhatsAppConnectionProps {
   status: ConnectionStatus;
   qrCode: string | null;
+  groups: WhatsAppGroup[];
+  selectedGroup: WhatsAppGroup | null;
+  isLoadingGroups: boolean;
+  serverConnected: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onRefreshQR: () => void;
+  onLoadGroups: () => void;
+  onSelectGroup: (group: WhatsAppGroup | null) => void;
 }
 
-export function WhatsAppConnection({ 
-  status, 
-  qrCode, 
-  onConnect, 
-  onDisconnect, 
-  onRefreshQR 
+export function WhatsAppConnection({
+  status,
+  qrCode,
+  groups,
+  selectedGroup,
+  isLoadingGroups,
+  serverConnected,
+  onConnect,
+  onDisconnect,
+  onRefreshQR,
+  onLoadGroups,
+  onSelectGroup
 }: WhatsAppConnectionProps) {
   const getStatusInfo = () => {
     switch (status) {
@@ -74,6 +98,16 @@ export function WhatsAppConnection({
 
   return (
     <Card className="p-6 bg-card border-border">
+      {/* Server Connection Warning */}
+      {!serverConnected && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-sm">
+            Servidor não conectado. Execute <code className="bg-destructive/20 px-1 rounded">npm run server</code> na pasta server
+          </span>
+        </div>
+      )}
+
       {/* Status Badge */}
       <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${statusInfo.bgColor} ${statusInfo.color} mb-6`}>
         {statusInfo.icon}
@@ -94,11 +128,12 @@ export function WhatsAppConnection({
               Para enviar mensagens automaticamente, conecte sua conta do WhatsApp
             </p>
           </div>
-          <Button 
-            onClick={onConnect} 
-            variant="whatsapp" 
+          <Button
+            onClick={onConnect}
+            variant="whatsapp"
             size="lg"
             className="w-full"
+            disabled={!serverConnected}
           >
             <Wifi className="h-5 w-5 mr-2" />
             Conectar meu WhatsApp
@@ -113,6 +148,9 @@ export function WhatsAppConnection({
           <p className="text-muted-foreground">
             Iniciando conexão com WhatsApp...
           </p>
+          <p className="text-xs text-muted-foreground/70">
+            Isso pode levar alguns segundos na primeira vez
+          </p>
         </div>
       )}
 
@@ -121,18 +159,18 @@ export function WhatsAppConnection({
         <div className="text-center space-y-4">
           <div className="bg-white p-4 rounded-xl inline-block mx-auto">
             {qrCode ? (
-              <img 
-                src={qrCode} 
-                alt="QR Code WhatsApp" 
+              <img
+                src={qrCode}
+                alt="QR Code WhatsApp"
                 className="w-48 h-48"
               />
             ) : (
               <div className="w-48 h-48 flex items-center justify-center bg-secondary/20 rounded-lg">
-                <QrCode className="h-20 w-20 text-muted-foreground/30" />
+                <Loader2 className="h-12 w-12 animate-spin text-muted-foreground/50" />
               </div>
             )}
           </div>
-          
+
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-foreground">
               Escaneie o QR Code
@@ -147,16 +185,16 @@ export function WhatsAppConnection({
           </div>
 
           <div className="flex gap-3 justify-center">
-            <Button 
-              onClick={onRefreshQR} 
+            <Button
+              onClick={onRefreshQR}
               variant="outline"
               size="sm"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar QR Code
             </Button>
-            <Button 
-              onClick={onDisconnect} 
+            <Button
+              onClick={onDisconnect}
               variant="ghost"
               size="sm"
             >
@@ -168,23 +206,112 @@ export function WhatsAppConnection({
 
       {/* Connected State */}
       {status === "connected" && (
-        <div className="text-center space-y-4">
-          <div className="w-20 h-20 mx-auto rounded-full bg-success/10 flex items-center justify-center">
-            <CheckCircle2 className="h-10 w-10 text-success" />
+        <div className="space-y-6">
+          <div className="text-center space-y-4">
+            <div className="w-20 h-20 mx-auto rounded-full bg-success/10 flex items-center justify-center">
+              <CheckCircle2 className="h-10 w-10 text-success" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                WhatsApp Conectado!
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Selecione um grupo para enviar as mensagens
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              WhatsApp Conectado!
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Você pode enviar mensagens automaticamente agora
-            </p>
+
+          {/* Group Selection */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                Destinatário (Grupo ou Contato)
+              </label>
+              <Button
+                onClick={onLoadGroups}
+                variant="ghost"
+                size="sm"
+                disabled={isLoadingGroups}
+              >
+                {isLoadingGroups ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            <Select
+              value={selectedGroup?.id || ""}
+              onValueChange={(value) => {
+                const group = groups.find(g => g.id === value);
+                onSelectGroup(group || null);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione um grupo" />
+              </SelectTrigger>
+              <SelectContent>
+                {groups.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {isLoadingGroups ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Carregando grupos...
+                      </div>
+                    ) : (
+                      <>
+                        Nenhum grupo encontrado.
+                        <br />
+                        <Button
+                          onClick={onLoadGroups}
+                          variant="link"
+                          size="sm"
+                          className="mt-2"
+                        >
+                          Carregar grupos
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      <div className="flex items-center gap-2">
+                        {group.isGroup ? (
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Users className="h-4 w-4 text-success" />
+                        )}
+                        <span>{group.name}</span>
+                        {group.isGroup && group.participants > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            ({group.participants} membros)
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+
+            {selectedGroup && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 text-success">
+                <Check className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  Mensagens serão enviadas para: {selectedGroup.name}
+                </span>
+              </div>
+            )}
           </div>
-          <Button 
-            onClick={onDisconnect} 
+
+          <Button
+            onClick={onDisconnect}
             variant="outline"
             size="sm"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <WifiOff className="h-4 w-4 mr-2" />
             Desconectar
@@ -206,8 +333,8 @@ export function WhatsAppConnection({
               Não foi possível conectar ao WhatsApp. Tente novamente.
             </p>
           </div>
-          <Button 
-            onClick={onConnect} 
+          <Button
+            onClick={onConnect}
             variant="gradient"
             size="lg"
             className="w-full"
