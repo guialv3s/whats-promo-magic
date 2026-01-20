@@ -111,13 +111,18 @@ export class WhatsAppService {
             this.io.emit('loading-progress', { percent, message });
         });
 
+        // Errors
+        this.client.on('error', (error) => {
+            console.error('❌ Erro no cliente WhatsApp:', error);
+        });
+
         // Initialize the client
         try {
             await this.client.initialize();
         } catch (error) {
             console.error('❌ Erro ao inicializar cliente:', error);
             this.setStatus('error');
-            throw error;
+            // Do not rethrow, just log, so the server keeps running
         }
     }
 
@@ -194,25 +199,22 @@ export class WhatsAppService {
         try {
             console.log(`📤 Enviando mensagem para ${chatId}...`);
 
-            let result;
-
             if (imageBase64) {
-                // Send message with image
-                console.log('📷 Enviando mensagem com imagem...');
+                console.log('📷 Enviando imagem com legenda...');
                 const media = await this.createMediaFromBase64(imageBase64);
 
-                result = await this.client.sendMessage(chatId, media, {
+                const result = await this.client.sendMessage(chatId, media, {
                     caption: message
                 });
 
-                console.log('✅ Mensagem com imagem enviada com sucesso!');
+                console.log('✅ Imagem com legenda enviada com sucesso!');
+                return result;
             } else {
-                // Send text-only message
-                result = await this.client.sendMessage(chatId, message);
+                console.log('💬 Enviando mensagem de texto...');
+                const result = await this.client.sendMessage(chatId, message);
                 console.log('✅ Mensagem enviada com sucesso!');
+                return result;
             }
-
-            return result;
         } catch (error) {
             console.error('❌ Erro ao enviar mensagem:', error);
             throw error;
