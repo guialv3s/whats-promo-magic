@@ -72,11 +72,19 @@ class ApiService {
         return this.socket?.connected ?? false;
     }
 
+    private getAuthHeaders(): HeadersInit {
+        const token = localStorage.getItem('authToken');
+        return {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+    }
+
     // WhatsApp API
     async connectWhatsApp(): Promise<{ success: boolean; message?: string; error?: string }> {
         const response = await fetch(`${API_URL}/api/whatsapp/connect`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: this.getAuthHeaders()
         });
         return response.json();
     }
@@ -84,39 +92,45 @@ class ApiService {
     async disconnectWhatsApp(): Promise<{ success: boolean }> {
         const response = await fetch(`${API_URL}/api/whatsapp/disconnect`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: this.getAuthHeaders()
         });
         return response.json();
     }
 
     async getWhatsAppStatus(): Promise<{ status: string; isReady: boolean }> {
-        const response = await fetch(`${API_URL}/api/whatsapp/status`);
+        const response = await fetch(`${API_URL}/api/whatsapp/status`, {
+            headers: this.getAuthHeaders()
+        });
         return response.json();
     }
 
     async refreshQRCode(): Promise<{ success: boolean }> {
         const response = await fetch(`${API_URL}/api/whatsapp/refresh-qr`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: this.getAuthHeaders()
         });
         return response.json();
     }
 
     async getGroups(): Promise<{ success: boolean; groups: WhatsAppGroup[] }> {
-        const response = await fetch(`${API_URL}/api/whatsapp/groups`);
+        const response = await fetch(`${API_URL}/api/whatsapp/groups`, {
+            headers: this.getAuthHeaders()
+        });
         return response.json();
     }
 
     // Messages API
     async getScheduledMessages(): Promise<{ success: boolean; messages: ScheduledMessage[] }> {
-        const response = await fetch(`${API_URL}/api/messages`);
+        const response = await fetch(`${API_URL}/api/messages`, {
+            headers: this.getAuthHeaders()
+        });
         return response.json();
     }
 
     async scheduleMessage(data: ScheduleMessageRequest): Promise<{ success: boolean; message?: ScheduledMessage; error?: string }> {
         const response = await fetch(`${API_URL}/api/messages`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
         return response.json();
@@ -124,7 +138,8 @@ class ApiService {
 
     async cancelMessage(id: string): Promise<{ success: boolean }> {
         const response = await fetch(`${API_URL}/api/messages/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
         });
         return response.json();
     }
@@ -132,7 +147,7 @@ class ApiService {
     async sendMessageNow(groupId: string, message: string, imageBase64?: string | null): Promise<{ success: boolean; message?: string; error?: string }> {
         const response = await fetch(`${API_URL}/api/messages/send-now`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify({ groupId, message, imageBase64 })
         });
         return response.json();

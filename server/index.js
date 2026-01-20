@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import { WhatsAppService } from './services/whatsapp.js';
 import { SchedulerService } from './services/scheduler.js';
 import { MessagesStore } from './services/messagesStore.js';
+import { AuthService } from './services/auth.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -25,6 +26,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Initialize services
+const authService = new AuthService();
 const messagesStore = new MessagesStore();
 const whatsappService = new WhatsAppService(io);
 const schedulerService = new SchedulerService(whatsappService, messagesStore, io);
@@ -49,8 +51,54 @@ io.on('connection', (socket) => {
 
 // API Routes
 
+// Authentication middleware
+const requireAuth = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token || !authService.validateToken(token)) {
+    return res.status(401).json({ success: false, error: 'Não autorizado' });
+  }
+
+  req.user = authService.getUserFromToken(token);
+  next();
+};
+
+// Auth Routes
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const result = authService.login(username, password);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(401).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+      authService.logout(token);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/auth/validate', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const isValid = token && authService.validateToken(token);
+
+  if (isValid) {
+    res.json({ success: true, username: authService.getUserFromToken(token) });
+  } else {
+    res.status(401).json({ success: false, error: 'Token inválido' });
+  }
+});
+
 // WhatsApp Connection
-app.post('/api/whatsapp/connect', async (req, res) => {
+app.post('/api/whatsapp/connect', requireAuth, async (req, res) => {
   try {
     await whatsappService.connect();
     res.json({ success: true, message: 'Iniciando conexão...' });
@@ -59,7 +107,7 @@ app.post('/api/whatsapp/connect', async (req, res) => {
   }
 });
 
-app.post('/api/whatsapp/disconnect', async (req, res) => {
+app.post('/api/whatsapp/disconnect', requireAuth, async (req, res) => {
   try {
     await whatsappService.disconnect();
     res.json({ success: true, message: 'Desconectado' });
@@ -68,14 +116,14 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
   }
 });
 
-app.get('/api/whatsapp/status', (req, res) => {
+app.get('/api/whatsapp/status', requireAuth, (req, res) => {
   res.json({
     status: whatsappService.getStatus(),
     isReady: whatsappService.isReady()
   });
 });
 
-app.post('/api/whatsapp/refresh-qr', async (req, res) => {
+app.post('/api/whatsapp/refresh-qr', requireAuth, async (req, res) => {
   try {
     await whatsappService.refreshQR();
     res.json({ success: true });
@@ -85,7 +133,7 @@ app.post('/api/whatsapp/refresh-qr', async (req, res) => {
 });
 
 // Get WhatsApp Groups
-app.get('/api/whatsapp/groups', async (req, res) => {
+app.get('/api/whatsapp/groups', requireAuth, async (req, res) => {
   try {
     const groups = await whatsappService.getGroups();
     res.json({ success: true, groups });
@@ -95,11 +143,11 @@ app.get('/api/whatsapp/groups', async (req, res) => {
 });
 
 // Scheduled Messages
-app.get('/api/messages', (req, res) => {
+app.get('/api/messages', requireAuth, (req, res) => {
   res.json({ success: true, messages: messagesStore.getAll() });
 });
 
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', requireAuth, (req, res) => {
   try {
     const { message, scheduledTime, groupId, groupName, productData } = req.body;
 
@@ -132,7 +180,7 @@ app.post('/api/messages', (req, res) => {
   }
 });
 
-app.delete('/api/messages/:id', (req, res) => {
+app.delete('/api/messages/:id', requireAuth, (req, res) => {
   try {
     const { id } = req.params;
 
@@ -153,7 +201,7 @@ app.delete('/api/messages/:id', (req, res) => {
 });
 
 // Send message immediately (with optional image)
-app.post('/api/messages/send-now', async (req, res) => {
+app.post('/api/messages/send-now', requireAuth, async (req, res) => {
   try {
     const { message, groupId, imageBase64 } = req.body;
 
