@@ -38,17 +38,14 @@ export class WhatsAppService {
             }),
             puppeteer: {
                 headless: true,
-                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null, 
+                // Remova a lógica fixa e use apenas os argumentos
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--disable-gpu',
                     '--single-process',
-                ]
+                    '--no-zygote'
+                ],
             }
         });
 
