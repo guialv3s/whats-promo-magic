@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const UPLOADS_DIR = join(__dirname, '../uploads');
 
-// ADAPTADOR CUSTOMIZADO PARA NEON (Sem depender de wwebjs-pg externo)
+// ADAPTADOR CUSTOMIZADO PARA NEON
 class NeonStore {
     constructor(pool) {
         this.pool = pool;
@@ -71,12 +71,11 @@ export class WhatsAppService {
             this.client = new Client({
                 authStrategy: new RemoteAuth({
                     store: store,
-                    backupSyncIntervalMs: 300000, // Backup a cada 5 min
+                    backupSyncIntervalMs: 300000,
                     session: 'sessao-magic'
                 }),
                 puppeteer: {
                     headless: true,
-                    // Removemos executablePath fixo para o Render usar o que ele instalou
                     args: [
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
@@ -116,6 +115,7 @@ export class WhatsAppService {
             console.log('✅ WhatsApp pronto!');
             this.setStatus('connected');
             this.ready = true;
+            this.qrCode = null;
             this.io.emit('connection-status', { status: 'connected', isReady: true });
         });
 
@@ -126,12 +126,14 @@ export class WhatsAppService {
         this.client.on('auth_failure', (msg) => {
             console.error('❌ Falha na autenticação:', msg);
             this.setStatus('error');
+            this.ready = false;
         });
 
         this.client.on('disconnected', async (reason) => {
             console.log('📴 Desconectado:', reason);
             this.setStatus('disconnected');
             this.ready = false;
+            this.qrCode = null;
         });
     }
 
@@ -146,6 +148,7 @@ export class WhatsAppService {
         }
         this.setStatus('disconnected');
         this.ready = false;
+        this.qrCode = null;
     }
 
     setStatus(status) {
@@ -153,7 +156,6 @@ export class WhatsAppService {
         console.log(`📊 Status: ${status}`);
     }
 
-    // Métodos extras (sendMessage, etc) devem vir abaixo
     async sendMessage(chatId, message, imageBase64 = null) {
         if (!this.ready || !this.client) throw new Error('WhatsApp não está conectado');
         if (imageBase64) {
@@ -162,5 +164,18 @@ export class WhatsAppService {
             return await this.client.sendMessage(chatId, media, { caption: message });
         }
         return await this.client.sendMessage(chatId, message);
+    }
+
+    // MÉTODOS AUXILIARES PARA O INDEX.JS
+    getStatus() {
+        return this.status;
+    }
+
+    getQRCode() {
+        return this.qrCode;
+    }
+
+    isReady() {
+        return this.ready;
     }
 }
