@@ -1,7 +1,13 @@
 import pkg from 'whatsapp-web.js';
-const { Client, RemoteAuth, MessageMedia } = pkg; // A declaração acontece aqui
+const { Client, RemoteAuth, MessageMedia } = pkg;
 import QRCode from 'qrcode';
-import { execSync } from 'child_process';
+import { existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import pg from 'pg';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const UPLOADS_DIR = join(__dirname, '../uploads');
 
 // ADAPTADOR CUSTOMIZADO PARA NEON
 class NeonStore {
