@@ -5,7 +5,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-
+import { Client, RemoteAuth } from 'whatsapp-web.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const UPLOADS_DIR = join(__dirname, '../uploads');
@@ -35,23 +35,7 @@ class NeonStore {
 }
 
 export class WhatsAppService {
-    constructor(io) {
-        this.io = io;
-        this.client = null;
-        this.status = 'disconnected';
-        this.qrCode = null;
-        this.ready = false;
-
-        const { Pool } = pg;
-        this.pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: { rejectUnauthorized: false }
-        });
-
-        if (!existsSync(UPLOADS_DIR)) {
-            mkdirSync(UPLOADS_DIR, { recursive: true });
-        }
-    }
+    // ... constructor igual ...
 
     async connect() {
         if (this.client) {
@@ -68,6 +52,16 @@ export class WhatsAppService {
 
             const store = new NeonStore(this.pool);
 
+            // Tenta localizar o binário automaticamente se ele existir no sistema
+            // Caso contrário, deixa o Puppeteer usar o que ele baixou no postinstall
+            let autoChromePath;
+            try {
+                autoChromePath = execSync('which google-chrome || which chromium-browser || which chromium')
+                    .toString().trim();
+            } catch (e) {
+                autoChromePath = null; // Se não achar no sistema, o Puppeteer vira o herói
+            }
+
             this.client = new Client({
                 authStrategy: new RemoteAuth({
                     store: store,
@@ -76,13 +70,14 @@ export class WhatsAppService {
                 }),
                 puppeteer: {
                     headless: true,
-                    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
+                    // NÃO defina executablePath. 
+                    // O Puppeteer vai usar o Chrome que o 'npx puppeteer browsers install chrome' baixou.
                     args: [
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
-                        '--single-process',
-                        '--no-zygote'
+                        '--disable-gpu',
+                        '--single-process'
                     ],
                 }
             });
